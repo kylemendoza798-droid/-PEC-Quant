@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f4c81">
+<title>PEC Estimator PH</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+  header {
+    background: linear-gradient(135deg, #0f4c81 0%, #1e3a8a 100%);
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 1.3rem; color: #fff; }
+  header p { font-size: 0.75rem; color: #cbd5e1; margin-top: 4px; }
+
+  .container { padding: 16px; max-width: 720px; margin: 0 auto; }
+
+  .tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 8px 0;
+    margin-bottom: 16px;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0;
+    padding: 10px 16px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 24px;
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: #0f4c81;
+    color: #fff;
+    border-color: #3b82f6;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid #334155;
+  }
+  .card h2 {
+    font-size: 1rem;
+    color: #60a5fa;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: #3b82f6; }
+
+  button.primary {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #0f4c81, #1e3a8a);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 14px;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  button.primary:active { transform: scale(0.98); }
+
+  .result {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-left: 3px solid #10b981;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+    font-size: 0.85rem;
+  }
+  .result.error { border-left-color: #ef4444; }
+  .result.warning { border-left-color: #f59e0b; }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #1e293b;
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-row .label { color: #94a3b8; }
+  .result-row .value { color: #e2e8f0; font-weight: 600; text-align: right; }
+  .result-row.big .value { color: #10b981; font-size: 1.05rem; }
+
+  .bom-table {
+    width: 100%;
+    font-size: 0.75rem;
+    border-collapse: collapse;
+    margin-top: 8px;
+  }
+  .bom-table th, .bom-table td {
+    padding: 6px 4px;
+    text-align: left;
+    border-bottom: 1px solid #334155;
+  }
+  .bom-table th { color: #60a5fa; font-weight: 600; }
+  .bom-table td:last-child, .bom-table th:last-child { text-align: right; }
+
+  .total-row {
+    background: #064e3b;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+  }
+  .total-row .amount { color: #10b981; font-size: 1.1rem; }
+
+  .appliance-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    align-items: end;
+    margin-bottom: 10px;
+  }
+  .appliance-row label { margin-top: 0; font-size: 0.75rem; }
+  .appliance-row input, .appliance-row select { padding: 8px; font-size: 0.8rem; }
+
+  footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #0f172a;
+    border-top: 1px solid #1e293b;
+    text-align: center;
+    padding: 8px;
+    font-size: 0.7rem;
+    color: #64748b;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ PEC Estimator PH</h1>
+  <p>Electrical Design & Estimation • PEC 2017 & NEC</p>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="load">🔌 Load</button>
+    <button class="tab-btn" data-tab="appliance">🏠 Appliance</button>
+    <button class="tab-btn" data-tab="conductor">🔗 Conductor</button>
+    <button class="tab-btn" data-tab="voltage">⚡ V-Drop</button>
+    <button class="tab-btn" data-tab="lighting">💡 Lighting</button>
+    <button class="tab-btn" data-tab="bom">📦 BOM</button>
+    <button class="tab-btn" data-tab="manpower">👷 Manpower</button>
+  </div>
+
+  <!-- LOAD TAB -->
+  <div class="panel active" id="load">
+    <div class="card">
+      <h2>🔌 Load Calculation (PEC 2017)</h2>
+      <label>Floor Area (m²)</label>
+      <input type="number" id="loadArea" value="100" step="1">
+      <label>Occupancy Type</label>
+      <select id="loadOccupancy">
+        <option value="dwelling">Dwelling (24 VA/m²)</option>
+        <option value="office_buildings">Office (16 VA/m²)</option>
+        <option value="schools">Schools (16 VA/m²)</option>
+        <option value="warehouses">Warehouse (4 VA/m²)</option>
+        <option value="restaurants">Restaurant (16 VA/m²)</option>
+      </select>
+      <label>Other Loads (VA) — e.g., aircon, refrigerator</label>
+      <input type="number" id="loadOther" value="1500" step="100">
+      <button class="primary" onclick="calcLoad()">Calculate Load</button>
+      <div id="loadResult"></div>
+    </div>
+  </div>
+
+  <!-- APPLIANCE TAB -->
+  <div class="panel" id="appliance">
+    <div class="card">
+      <h2>🏠 Appliance Loads</h2>
+      <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px;">
+        Ilagay ang mga appliance. Pwede kang pumili ng unit (Watts o HP).
+      </p>
+      <div id="applianceList">
+        <!-- Appliance rows will be generated by JS -->
+      </div>
+      <button class="primary" onclick="calcAppliance()">Calculate Appliance Loads</button>
+      <div id="applianceResult"></div>
+    </div>
+  </div>
+
+  <!-- CONDUCTOR TAB -->
+  <div class="panel" id="conductor">
+    <div class="card">
+      <h2>🔗 Conductor Sizing (PEC §3.10.2.6)</h2>
+      <label>Load Current (A)</label>
+      <input type="number" id="condCurrent" value="30" step="0.1">
+      <label>Voltage (V)</label>
+      <input type="number" id="condVoltage" value="220" step="10">
+      <label>Terminal Temperature</label>
+      <select id="condTemp">
+        <option value="60C">60°C</option>
+        <option value="75C" selected>75°C</option>
+      </select>
+      <label>Ambient Temperature (°C)</label>
+      <select id="condAmbient">
+        <option value="30">30°C (Normal)</option>
+        <option value="35">35°C</option>
+        <option value="40">40°C</option>
+        <option value="45">45°C</option>
+      </select>
+      <label>Number of Current-Carrying Conductors</label>
+      <select id="condCCC">
+        <option value="3" selected>3 (No derating)</option>
+        <option value="4">4 (0.80 factor)</option>
+        <option value="5">5 (0.70 factor)</option>
+        <option value="6">6 (0.60 factor)</option>
+      </select>
+      <button class="primary" onclick="calcConductor()">Select Conductor</button>
+      <div id="condResult"></div>
+    </div>
+  </div>
+
+  <!-- VOLTAGE DROP TAB -->
+  <div class="panel" id="voltage">
+    <div class="card">
+      <h2>⚡ Voltage Drop (PEC §2.25.2)</h2>
+      <label>Phase</label>
+      <select id="vdPhase">
+        <option value="1">Single-Phase</option>
+        <option value="3">Three-Phase</option>
+      </select>
+      <label>Material</label>
+      <select id="vdMaterial">
+        <option value="copper">Copper</option>
+        <option value="aluminum">Aluminum</option>
+      </select>
+      <label>Current (A)</label>
+      <input type="number" id="vdCurrent" value="30" step="0.1">
+      <label>Cable Length (ft)</label>
+      <input type="number" id="vdLength" value="50" step="5">
+      <label>Voltage (V)</label>
+      <input type="number" id="vdVoltage" value="220" step="10">
+      <label>Wire Size (AWG/mm²)</label>
+      <select id="vdWire">
+        <option value="14">14 AWG (2.0 mm²)</option>
+        <option value="12" selected>12 AWG (3.5 mm²)</option>
+        <option value="10">10 AWG (5.5 mm²)</option>
+        <option value="8">8 AWG (8.0 mm²)</option>
+        <option value="6">6 AWG (14 mm²)</option>
+        <option value="4">4 AWG (22 mm²)</option>
+        <option value="2">2 AWG (30 mm²)</option>
+        <option value="1/0">1/0 AWG</option>
+      </select>
+      <button class="primary" onclick="calcVD()">Compute Voltage Drop</button>
+      <div id="vdResult"></div>
+    </div>
+  </div>
+
+  <!-- LIGHTING TAB -->
+  <div class="panel" id="lighting">
+    <div class="card">
+      <h2>💡 Lighting Calculation (Lumen Method)</h2>
+      <label>Room Area (m²)</label>
+      <input type="number" id="lightArea" value="20" step="1">
+      <label>Room Type</label>
+      <select id="lightRoom">
+        <option value="office">Office (500 lux)</option>
+        <option value="classroom">Classroom (300 lux)</option>
+        <option value="residential">Residential (150 lux)</option>
+        <option value="kitchen">Kitchen (300 lux)</option>
+        <option value="corridor">Corridor (100 lux)</option>
+        <option value="library">Library (500 lux)</option>
+      </select>
+      <label>Luminaire Type</label>
+      <select id="lightLum">
+        <option value="led_panel_36w">LED Panel 36W (3600 lm)</option>
+        <option value="led_panel_18w">LED Panel 18W (1800 lm)</option>
+        <option value="led_bulb_9w">LED Bulb 9W (900 lm)</option>
+        <option value="fluorescent_40w">Fluorescent 40W (3600 lm)</option>
+      </select>
+      <label>Coefficient of Utilization (CU)</label>
+      <input type="number" id="lightCU" value="0.7" step="0.05" min="0.1" max="1">
+      <label>Light Loss Factor (LLF)</label>
+      <input type="number" id="lightLLF" value="0.8" step="0.05" min="0.1" max="1">
+      <button class="primary" onclick="calcLight()">Calculate Fixtures</button>
+      <div id="lightResult"></div>
+    </div>
+  </div>
+
+  <!-- BOM TAB -->
+  <div class="panel" id="bom">
+    <div class="card">
+      <h2>📦 Bill of Materials</h2>
+      <label>Project Name</label>
+      <input type="text" id="bomName" value="Residential Project">
+      <label>Conductor 3.5 mm² (meters)</label>
+      <input type="number" id="bomWire35" value="50" step="1">
+      <label>Conductor 2.0 mm² (meters)</label>
+      <input type="number" id="bomWire20" value="80" step="1">
+      <label>PVC Conduit 1/2" (meters)</label>
+      <input type="number" id="bomPipe" value="80" step="1">
+      <label>LED Panel 36W (pcs)</label>
+      <input type="number" id="bomLed" value="10" step="1">
+      <label>LED Bulb 9W (pcs)</label>
+      <input type="number" id="bomBulb" value="6" step="1">
+      <label>Switches (pcs)</label>
+      <input type="number" id="bomSwitch" value="6" step="1">
+      <label>Outlets (pcs)</label>
+      <input type="number" id="bomOutlet" value="8" step="1">
+      <label>Breakers 20A (pcs)</label>
+      <input type="number" id="bomBrk20" value="4" step="1">
+      <label>Breakers 30A (pcs)</label>
+      <input type="number" id="bomBrk30" value="1" step="1">
+      <label>Panelboard 8-branch (pcs)</label>
+      <input type="number" id="bomPanel" value="1" step="1">
+      <button class="primary" onclick="calcBOM()">Generate BOM</button>
+      <div id="bomResult"></div>
+    </div>
+  </div>
+
+  <!-- MANPOWER TAB -->
+  <div class="panel" id="manpower">
+    <div class="card">
+      <h2>👷 Manpower Estimation (DPWH Rates)</h2>
+      <label>Project Duration (days)</label>
+      <input type="number" id="mpDays" value="15" step="1">
+      <label>Lighting Outlets (pcs)</label>
+      <input type="number" id="mpLight" value="6" step="1">
+      <label>Convenience Outlets (pcs)</label>
+      <input type="number" id="mpOutlet" value="8" step="1">
+      <label>Switches (pcs)</label>
+      <input type="number" id="mpSwitch" value="6" step="1">
+      <label>Conduit Length (meters)</label>
+      <input type="number" id="mpConduit" value="80" step="1">
+      <label>Wire Pulling (meters)</label>
+      <input type="number" id="mpWire" value="130" step="1">
+      <label>Panelboards (pcs)</label>
+      <input type="number" id="mpPanel" value="1" step="1">
+      <button class="primary" onclick="calcManpower()">Estimate Manpower</button>
+      <div id="mpResult"></div>
+    </div>
+  </div>
+</div>
+
+<footer>⚡ PEC Estimator PH • Educational use only</footer>
+
+<script>
+// ============================================================
+// PEC TABLES (JavaScript)
+// ============================================================
+const AMPACITY_COPPER = {
+  2.0:{'60C':15,'75C':20,'90C':25},
+  3.5:{'60C':20,'75C':25,'90C':30},
+  5.5:{'60C':30,'75C':35,'90C':40},
+  8.0:{'60C':40,'75C':50,'90C':55},
+  14.0:{'60C':55,'75C':65,'90C':75},
+  22.0:{'60C':70,'75C':85,'90C':95},
+  30.0:{'60C':85,'75C':100,'90C':115},
+  38.0:{'60C':100,'75C':115,'90C':130},
+  50.0:{'60C':115,'75C':140,'90C':150},
+  60.0:{'60C':130,'75C':155,'90C':170},
+  80.0:{'60C':155,'75C':190,'90C':205},
+  100.0:{'60C':185,'75C':220,'90C':240}
+};
+const LIGHTING_LOAD = {dwelling:24,office_buildings:16,schools:16,warehouses:4,restaurants:16};
+const AMBIENT_FACTOR = {30:1.00,35:0.94,40:0.88,45:0.82};
+const CCC_FACTOR = {3:1.0,4:0.80,5:0.70,6:0.60};
+const STANDARD_OCPD = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250];
+const RESISTIVITY = {copper:12.9,aluminum:21.2};
+const CMIL = {'14':4110,'12':6530,'10':10380,'8':16510,'6':26240,'4':41740,'2':66360,'1/0':105600};
+const ILLUMINANCE = {office:500,classroom:300,residential:150,kitchen:300,corridor:100,library:500};
+const LUMENS = {led_panel_36w:3600,led_panel_18w:1800,led_bulb_9w:900,fluorescent_40w:3600};
+const WATTAGE = {led_panel_36w:36,led_panel_18w:18,led_bulb_9w:9,fluorescent_40w:40};
+const PRICES = {
+  'THHN 3.5mm²':65,'THHN 2.0mm²':45,'PVC Pipe 1/2"':85,
+  'LED Panel 36W':850,'LED Bulb 9W':180,
+  'Switch 1-Gang':120,'Outlet Duplex':150,
+  'Breaker 20A':350,'Breaker 30A':450,
+  'Panelboard 8-Branch':3500
+};
+
+// ============================================================
+// TAB NAVIGATION
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  };
+});
+
+// ============================================================
+// APPLIANCE TAB
+// ============================================================
+const APPLIANCE_TYPES = [
+  {name:'ACU', unit:'HP', default:1.5, pf:0.85},
+  {name:'Water Heater', unit:'W', default:3500, pf:0.8},
+  {name:'Convenience Outlet', unit:'VA', default:180, pf:1.0},
+  {name:'Water Pump', unit:'HP', default:1, pf:0.85},
+  {name:'Refrigerator', unit:'W', default:150, pf:0.8},
+  {name:'Electric Range', unit:'W', default:8000, pf:0.8},
+  {name:'Fire Alarm System', unit:'VA', default:500, pf:1.0},
+  {name:'Sauna Heater', unit:'W', default:6000, pf:0.8},
+  {name:'Booster Pump', unit:'HP', default:1, pf:0.85}
+];
+
+function renderAppliances() {
+  const container = document.getElementById('applianceList');
+  container.innerHTML = '';
+  APPLIANCE_TYPES.forEach((app, i) => {
+    const row = document.createElement('div');
+    row.className = 'appliance-row';
+    row.innerHTML = `
+      <div>
+        <label>${app.name}</label>
+        <select id="appUnit_${i}" onchange="updateApplianceUnit(${i})">
+          <option value="W" ${app.unit === 'W' ? 'selected' : ''}>Watts</option>
+          <option value="HP" ${app.unit === 'HP' ? 'selected' : ''}>HP</option>
+          <option value="VA" ${app.unit === 'VA' ? 'selected' : ''}>VA</option>
+        </select>
+      </div>
+      <div>
+        <label>Value</label>
+        <input type="number" id="appValue_${i}" value="${app.default}" step="0.1">
+      </div>
+      <div>
+        <label>PF</label>
+        <input type="number" id="appPF_${i}" value="${app.pf}" step="0.01" min="0.1" max="1">
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function updateApplianceUnit(i) {
+  const unit = document.getElementById(`appUnit_${i}`).value;
+  const valueInput = document.getElementById(`appValue_${i}`);
+  if (unit === 'HP') {
+    valueInput.value = 1.5;
+  } else if (unit === 'W') {
+    valueInput.value = 1000;
+  } else {
+    valueInput.value = 500;
+  }
+}
+
+// Motor FLC table (simplified, single-phase, 230V)
+const MOTOR_FLC = {
+  '0.5': 4.4, '0.75': 6.4, '1': 8.0, '1.5': 10.0, '2': 12.0,
+  '3': 17.0, '5': 28.0, '7.5': 40.0, '10': 50.0
+};
+
+function calcAppliance() {
+  let totalVA = 0;
+  let totalHP = 0;
+  let details = [];
+  let hasMotor = false;
+
+  APPLIANCE_TYPES.forEach((app, i) => {
+    const unit = document.getElementById(`appUnit_${i}`).value;
+    const value = parseFloat(document.getElementById(`appValue_${i}`).value) || 0;
+    const pf = parseFloat(document.getElementById(`appPF_${i}`).value) || 0.8;
+
+    if (value <= 0) return;
+
+    let va = 0;
+    let desc = '';
+
+    if (unit === 'HP') {
+      hasMotor = true;
+      const hpKey = value.toString();
+      const flc = MOTOR_FLC[hpKey] || (value * 8); // fallback approx
+      va = flc * 230; // VA for motor
+      desc = `${app.name}: ${value} HP → ${flc}A FLC`;
+      totalHP += value;
+    } else if (unit === 'W') {
+      va = value / pf;
+      desc = `${app.name}: ${value}W ÷ ${pf} PF`;
+    } else { // VA
+      va = value;
+      desc = `${app.name}: ${value} VA`;
+    }
+
+    totalVA += va;
+    details.push({ name: app.name, va: va, desc: desc });
+  });
+
+  // Add 25% to largest motor (PEC requirement)
+  let motorVA = 0;
+  APPLIANCE_TYPES.forEach((app, i) => {
+    const unit = document.getElementById(`appUnit_${i}`).value;
+    const value = parseFloat(document.getElementById(`appValue_${i}`).value) || 0;
+    if (unit === 'HP' && value > 0) {
+      const hpKey = value.toString();
+      const flc = MOTOR_FLC[hpKey] || (value * 8);
+      motorVA = Math.max(motorVA, flc * 230);
+    }
+  });
+
+  const motorAdd = motorVA * 0.25;
+  const totalWithMotor = totalVA + motorAdd;
+
+  // Recommend breaker (next standard size, max 80% for continuous)
+  const current = totalWithMotor / 220;
+  let recommendedBreaker = STANDARD_OCPD.find(r => r >= current) || 'N/A';
+
+  // Ampere Frame (AF) vs Ampere Trip (AT)
+  let af, at;
+  if (current <= 60) {
+    af = 100; // typical frame for small breakers
+    at = recommendedBreaker;
+  } else if (current <= 100) {
+    af = 150;
+    at = recommendedBreaker;
+  } else if (current <= 150) {
+    af = 250;
+    at = recommendedBreaker;
+  } else {
+    af = 400;
+    at = recommendedBreaker;
+  }
+
+  let html = `<div class="result">`;
+  html += `<div class="result-row big"><span class="label">Total Appliance Load</span><span class="value">${totalVA.toFixed(0)} VA</span></div>`;
+  html += `<div class="result-row"><span class="label">Largest Motor (25%)</span><span class="value">+${motorAdd.toFixed(0)} VA</span></div>`;
+  html += `<div class="result-row big"><span class="label">Total with Motor Rule</span><span class="value">${totalWithMotor.toFixed(0)} VA</span></div>`;
+  html += `<div class="result-row"><span class="label">Total Current @ 220V</span><span class="value">${current.toFixed(2)} A</span></div>`;
+  html += `<div class="result-row"><span class="label">Recommended Breaker (AT)</span><span class="value">${recommendedBreaker} A</span></div>`;
+  html += `<div class="result-row"><span class="label">Ampere Frame (AF)</span><span class="value">${af} AF</span></div>`;
+  html += `<div class="result-row"><span class="label">Ampere Trip (AT)</span><span class="value">${at} AT</span></div>`;
+  html += `</div>`;
+
+  // Breakdown
+  html += `<div class="result" style="margin-top:8px;">`;
+  html += `<div style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">Breakdown:</div>`;
+  details.forEach(d => {
+    html += `<div class="result-row"><span class="label">${d.name}</span><span class="value">${d.va.toFixed(0)} VA</span></div>`;
+  });
+  html += `</div>`;
+
+  document.getElementById('applianceResult').innerHTML = html;
+}
+
+// ============================================================
+// LOAD CALCULATION
+// ============================================================
+function calcLoad(){
+  const area = parseFloat(document.getElementById('loadArea').value)||0;
+  const occ = document.getElementById('loadOccupancy').value;
+  const other = parseFloat(document.getElementById('loadOther').value)||0;
+  const density = LIGHTING_LOAD[occ]||24;
+  const lighting = area*density;
+  const appliance = occ==='dwelling'?3000:0;
+  const total = lighting+appliance+other;
+  let demand;
+  if(total<=3000){ demand=total; }
+  else if(total<=120000){ demand=3000+(total-3000)*0.35; }
+  else { demand=3000+117000*0.35+(total-120000)*0.25; }
+  document.getElementById('loadResult').innerHTML=`
+    <div class="result">
+      <div class="result-row"><span class="label">General Lighting</span><span class="value">${lighting.toFixed(0)} VA</span></div>
+      <div class="result-row"><span class="label">Small Appliance</span><span class="value">${appliance} VA</span></div>
+      <div class="result-row"><span class="label">Other Loads</span><span class="value">${other} VA</span></div>
+      <div class="result-row"><span class="label">Total Connected</span><span class="value">${total.toFixed(0)} VA</span></div>
+      <div class="result-row big"><span class="label">Demand Load</span><span class="value">${demand.toFixed(0)} VA</span></div>
+      <div class="result-row"><span class="label">Load Current @ 220V</span><span class="value">${(demand/220).toFixed(2)} A</span></div>
+    </div>`;
+}
+
+// ============================================================
+// CONDUCTOR SIZING
+// ============================================================
+function calcConductor(){
+  const I = parseFloat(document.getElementById('condCurrent').value)||0;
+  const temp = document.getElementById('condTemp').value;
+  const amb = parseInt(document.getElementById('condAmbient').value);
+  const ccc = parseInt(document.getElementById('condCCC').value);
+  const req = I;
+  const sizes = Object.keys(AMPACITY_COPPER).map(Number).sort((a,b)=>a-b);
+  let found = null;
+  for(const s of sizes){
+    const terminal = AMPACITY_COPPER[s][temp];
+    if(terminal < req) continue;
+    const derated = AMPACITY_COPPER[s]['90C']*AMBIENT_FACTOR[amb]*CCC_FACTOR[ccc];
+    if(derated >= req){ found={size:s,terminal,derated}; break; }
+  }
+  if(!found){
+    document.getElementById('condResult').innerHTML=`<div class="result error">❌ Walang angkop na conductor sa table.</div>`;
+    return;
+  }
+  const ocpd = STANDARD_OCPD.find(r=>r>=req && r<=AMPACITY_COPPER[found.size]['75C'])||'N/A';
+  document.getElementById('condResult').innerHTML=`
+    <div class="result">
+      <div class="result-row"><span class="label">Required Ampacity</span><span class="value">${req.toFixed(2)} A</span></div>
+      <div class="result-row big"><span class="label">Conductor Size</span><span class="value">${found.size} mm²</span></div>
+      <div class="result-row"><span class="label">Terminal Ampacity</span><span class="value">${found.terminal} A</span></div>
+      <div class="result-row"><span class="label">Derated 90°C</span><span class="value">${found.derated.toFixed(2)} A</span></div>
+      <div class="result-row"><span class="label">Recommended OCPD</span><span class="value">${ocpd} A</span></div>
+    </div>`;
+}
+
+// ============================================================
+// VOLTAGE DROP
+// ============================================================
+function calcVD(){
+  const phase = parseInt(document.getElementById('vdPhase').value);
+  const mat = document.getElementById('vdMaterial').value;
+  const I = parseFloat(document.getElementById('vdCurrent').value)||0;
+  const L = parseFloat(document.getElementById('vdLength').value)||0;
+  const V = parseFloat(document.getElementById('vdVoltage').value)||220;
+  const wire = document.getElementById('vdWire').value;
+  const rho = RESISTIVITY[mat];
+  const cmil = CMIL[wire];
+  const phaseMult = phase===1?2:1.732;
+  const vd = (phaseMult*rho*I*L)/cmil;
+  const pct = (vd/V)*100;
+  const compliant = pct<=3;
+  document.getElementById('vdResult').innerHTML=`
+    <div class="result ${compliant?'':'error'}">
+      <div class="result-row"><span class="label">Voltage Drop</span><span class="value">${vd.toFixed(3)} V</span></div>
+      <div class="result-row big"><span class="label">Percentage</span><span class="value">${pct.toFixed(3)}%</span></div>
+      <div class="result-row"><span class="label">PEC Limit</span><span class="value">3.00%</span></div>
+      <div class="result-row"><span class="label">Status</span><span class="value">${compliant?'✅ COMPLIANT':'❌ EXCEEDS LIMIT'}</span></div>
+    </div>`;
+}
+
+// ============================================================
+// LIGHTING
+// ============================================================
+function calcLight(){
+  const area = parseFloat(document.getElementById('lightArea').value)||0;
+  const room = document.getElementById('lightRoom').value;
+  const lum = document.getElementById('lightLum').value;
+  const cu = parseFloat(document.getElementById('lightCU').value)||0.7;
+  const llf = parseFloat(document.getElementById('lightLLF').value)||0.8;
+  const E = ILLUMINANCE[room];
+  const required = E*area;
+  const fixtureLum = LUMENS[lum];
+  const n = Math.ceil(required/(fixtureLum*cu*llf));
+  const watts = n*WATTAGE[lum];
+  const density = watts/area;
+  document.getElementById('lightResult').innerHTML=`
+    <div class="result">
+      <div class="result-row"><span class="label">Required Illuminance</span><span class="value">${E} lux</span></div>
+      <div class="result-row"><span class="label">Total Required Lumens</span><span class="value">${required.toFixed(0)} lm</span></div>
+      <div class="result-row big"><span class="label">Fixtures Needed</span><span class="value">${n} pcs</span></div>
+      <div class="result-row"><span class="label">Total Wattage</span><span class="value">${watts} W</span></div>
+      <div class="result-row"><span class="label">Power Density</span><span class="value">${density.toFixed(2)} W/m²</span></div>
+    </div>`;
+}
+
+// ============================================================
+// BOM GENERATOR
+// ============================================================
+function calcBOM(){
+  const items=[];
+  const add=(desc,qty,unit)=>{ if(qty>0) items.push({desc,qty,unit,price:PRICES[desc],total:qty*PRICES[desc]}); };
+  add('THHN 3.5mm²',parseFloat(document.getElementById('bomWire35').value)||0,'m');
+  add('THHN 2.0mm²',parseFloat(document.getElementById('bomWire20').value)||0,'m');
+  add('PVC Pipe 1/2"',(parseFloat(document.getElementById('bomPipe').value)||0)/3,'length(3m)');
+  add('LED Panel 36W',parseFloat(document.getElementById('bomLed').value)||0,'pc');
+  add('LED Bulb 9W',parseFloat(document.getElementById('bomBulb').value)||0,'pc');
+  add('Switch 1-Gang',parseFloat(document.getElementById('bomSwitch').value)||0,'pc');
+  add('Outlet Duplex',parseFloat(document.getElementById('bomOutlet').value)||0,'pc');
+  add('Breaker 20A',parseFloat(document.getElementById('bomBrk20').value)||0,'pc');
+  add('Breaker 30A',parseFloat(document.getElementById('bomBrk30').value)||0,'pc');
+  add('Panelboard 8-Branch',parseFloat(document.getElementById('bomPanel').value)||0,'pc');
+  let grand=0;
+  let rows=items.map(it=>{
+    grand+=it.total;
+    return `<tr><td>${it.desc}</td><td>${it.qty.toFixed(2)}</td><td>${it.unit}</td><td>₱${it.total.toFixed(2)}</td></tr>`;
+  }).join('');
+  document.getElementById('bomResult').innerHTML=`
+    <table class="bom-table">
+      <thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="total-row"><span>GRAND TOTAL</span><span class="amount">₱${grand.toFixed(2)}</span></div>`;
+}
+
+// ============================================================
+// MANPOWER
+// ============================================================
+function calcManpower(){
+  const days = parseInt(document.getElementById('mpDays').value)||15;
+  const light = parseInt(document.getElementById('mpLight').value)||0;
+  const outlet = parseInt(document.getElementById('mpOutlet').value)||0;
+  const sw = parseInt(document.getElementById('mpSwitch').value)||0;
+  const conduit = parseFloat(document.getElementById('mpConduit').value)||0;
+  const wire = parseFloat(document.getElementById('mpWire').value)||0;
+  const panel = parseInt(document.getElementById('mpPanel').value)||0;
+
+  const mh = light*1.5 + outlet*1.0 + sw*0.5 + conduit*0.15 + wire*0.08 + panel*16;
+  const totalMH = mh*1.19;
+  const workers = Math.ceil(totalMH/(days*8));
+  const foremen = Math.max(1,Math.ceil(workers*0.2));
+  const electricians = Math.max(1,Math.ceil(workers*0.4));
+  const helpers = Math.max(1,workers-foremen-electricians);
+
+  const rates={foreman:611.92,electrician:443.20,helper:350};
+  const laborCost = (foremen*rates.foreman + electricians*rates.electrician + helpers*rates.helper)*days;
+
+  document.getElementById('mpResult').innerHTML=`
+    <div class="result">
+      <div class="result-row"><span class="label">Raw Man-Hours</span><span class="value">${mh.toFixed(2)}</span></div>
+      <div class="result-row"><span class="label">With Absenteeism (×1.19)</span><span class="value">${totalMH.toFixed(2)}</span></div>
+      <div class="result-row big"><span class="label">Workers Needed</span><span class="value">${workers}</span></div>
+      <div class="result-row"><span class="label">Foreman</span><span class="value">${foremen}</span></div>
+      <div class="result-row"><span class="label">Electrician</span><span class="value">${electricians}</span></div>
+      <div class="result-row"><span class="label">Helper</span><span class="value">${helpers}</span></div>
+      <div class="result-row"><span class="label">Project Days</span><span class="value">${days}</span></div>
+      <div class="result-row big"><span class="label">Labor Cost</span><span class="value">₱${laborCost.toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>
+    </div>`;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderAppliances();
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
